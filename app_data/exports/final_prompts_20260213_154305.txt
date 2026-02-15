@@ -1,0 +1,7 @@
+=== Human-friendly Prompt ===
+
+Create an interface image that represents the prompt builder's role in refining initial prompts for use in other LLMs. The image should be designed for software engineers, using the lowest size, highest resolution format. Include transparency for text visibility, avoid recognizable letters, and consider blurred Egyptian hieroglyphs for a transformation theme. The image should convey enjoyment and inquisitiveness with a professional tone. Ensure the focus is on text refinement without being busy.
+
+=== LLM-optimized Prompt ===
+
+You are a graphic designer tasked with creating an interface image for a prompt builder tool. Your goal is to visually represent the tool's function of refining initial prompts for use in other LLMs. The target audience is software engineers. Use the lowest size, highest resolution format. Include transparency for text visibility, avoid recognizable letters, and consider blurred Egyptian hieroglyphs for a transformation theme. The image should convey enjoyment and inquisitiveness with a professional tone. Ensure the focus is on text refinement without being busy. Output format: a detailed description of the image including dimensions, colors, fonts, and design elements.

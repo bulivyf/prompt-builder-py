@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prompt Builder (Local‑First)</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="app-header" role="banner">
+    <div class="container">
+      <h1>Prompt Builder</h1>
+      <p class="subtitle">Objective: Produce a prompt that is syntactically and semantically cleab, while structurally optimized for a prompt engine. Provider: <span class="pill" aria-label="LLM provider">{{ provider }}</span></p>
+    </div>
+  </header>
+
+  <main id="main" class="container" role="main">
+    <section id="sectionInitial" class="card" aria-labelledby="step1-title">
+      <h2 id="step1-title">1) Initial Prompt</h2>
+
+      <div class="row wrap" style="margin-bottom: 0.75rem;">
+        <label class="inline-field" for="modeSelect">
+          <span class="label-inline">Category</span>
+          <select id="modeSelect" class="input" aria-label="Prompt builder category">
+            <option value="general" selected>General</option>
+            <option value="prompt_questionnaire">Prompt questionnaire</option>
+            <option value="sdlc">SDLC focused</option>
+          </select>
+          <span class="tooltip-wrap"><span class="tip" tabindex="0" role="button" aria-label="Help">ⓘ</span><span class="tooltip-panel" role="tooltip">General: generates final prompts directly.<br>Prompt questionnaire: ask clarifying questions first.<br>SDLC focused: stage templates for Inception/Elaboration/Construction/Transition.<br><br>Always aim to:<br>Ask the right question, ask it the right way,<br>Use the right terms, keep context in play.<br>Clarity first, let precision hold sway,<br>This is the mantra that guides what you say.</span></span>
+        </label>
+
+        <label id="stageWrap" class="inline-field motion-panel mode-hidden" for="stageSelect">
+          <span class="label-inline">SDLC stage</span>
+          <select id="stageSelect" class="input" aria-label="SDLC stage">
+            <option value="inception">Inception</option>
+            <option value="elaboration">Elaboration</option>
+            <option value="construction">Construction</option>
+            <option value="transition">Transition</option>
+          </select>
+          <span class="tooltip-wrap"><span class="tip" tabindex="0" role="button" aria-label="Help">ⓘ</span><span class="tooltip-panel" role="tooltip">Inception = requirements &amp; acceptance. Elaboration = design responsibilities/state/IO. Construction = module contracts &amp; integration. Transition = build slice, packaging, verification mapping.</span></span>
+        </label>
+      </div>
+
+      <label for="initialPrompt" class="label">Enter your starting prompt</label>
+      <div class="help" style="margin-top:-0.25rem;">
+        Tip: strong prompts usually state <b>Role</b>, <b>Goal</b>, <b>Context</b>, <b>Constraints</b>, and an <b>Output format</b> (plus examples / success criteria when relevant).
+        <span class="tooltip-wrap"><span class="tip" tabindex="0" role="button" aria-label="Help">ⓘ</span><span class="tooltip-panel" role="tooltip">Quality prompt checklist: Role • Goal • Context • Constraints (time, tools, style, do/don&#x27;t) • Inputs • Output format • Examples • Success criteria • Edge cases / failure handling • Tone.</span></span>
+      </div>
+      <textarea id="initialPrompt" class="textarea" rows="6" placeholder="Type your initial prompt here..."></textarea>
+
+      <div class="row">
+        <button id="btnQuestions" class="btn btn-primary" type="button">Generate clarifying questions</button>
+      </div>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <div id="error" class="error" role="alert" aria-live="assertive" hidden></div>
+    </section>
+
+    <section id="sectionQuestions" class="card motion-panel" aria-labelledby="step2-title">
+      <div class="section-head">
+        <h2 id="step2-title">2) Clarifying Questions</h2>
+        <button id="btnToggleQuestions" class="btn btn-ghost" type="button" aria-expanded="true" aria-controls="questionsBody">
+          Collapse
+        </button>
+      </div>
+
+      <div id="questionsBody">
+        <p class="help">Answer the questions to reduce ambiguity and add constraints.</p>
+
+        <form id="qaForm" class="qa" aria-describedby="qaHelp">
+          <div id="qaHelp" class="sr-only">
+            Use Tab to move between inputs. All questions are optional; unanswered questions will be ignored.
+          </div>
+          <div id="questionsContainer"></div>
+
+          <div class="row">
+            <button id="btnRefine" class="btn btn-accent" type="button" disabled>
+              Refine prompt
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="sectionRefined" class="card" aria-labelledby="step3-title">
+      <h2 id="step3-title">3) Refined Prompt</h2>
+      <div id="step3Status" class="status" role="status" aria-live="polite"></div>
+
+      <label for="refinedPrompt" class="label">Refined prompt output</label>
+      <textarea id="refinedPrompt" class="textarea" rows="8"></textarea>
+
+      <div class="row">
+        <button id="btnAccept" class="btn btn-success" type="button" disabled>
+          Accept and generate final variants
+        </button>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="step4-title">
+      <h2 id="step4-title">4) Final Prompt Variants</h2>
+
+      <div class="grid-2">
+        <div>
+          <label for="humanPrompt" class="label">Human-friendly version</label>
+          <textarea id="humanPrompt" class="textarea" rows="10" readonly></textarea>
+        </div>
+        <div>
+          <label for="llmPrompt" class="label">LLM-optimized version</label>
+          <textarea id="llmPrompt" class="textarea" rows="10" readonly></textarea>
+        </div>
+      </div>
+
+      <div class="row wrap">
+        <button id="btnSaveDb" class="btn btn-secondary" type="button" disabled>
+          Save to DB (SQLite)
+        </button>
+
+        <label class="inline-field" for="fileName">
+          <span class="label-inline">File name (optional)</span>
+          <input id="fileName" class="input" type="text" placeholder="final_prompts_YYYYMMDD_HHMMSS.txt" />
+        </label>
+
+        <button id="btnSaveFile" class="btn btn-secondary" type="button" disabled>
+          Save to file
+        </button>
+
+        <button id="btnCopy" class="btn btn-warning" type="button" disabled>
+          Copy LLM-optimized to clipboard
+        </button>
+      </div>
+
+      <div id="saveStatus" class="status" role="status" aria-live="polite"></div>
+    </section>
+
+    <footer class="footer" role="contentinfo">
+      <p>
+        Runs locally on your machine. Keyboard: Tab/Shift+Tab to navigate, Enter/Space to activate buttons.
+      </p>
+    </footer>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
+
+

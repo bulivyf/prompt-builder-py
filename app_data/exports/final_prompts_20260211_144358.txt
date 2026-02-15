@@ -1,0 +1,11 @@
+=== Human-friendly Prompt ===
+
+Write a Python function `get_3primesfromsoe(v1)` that implements the Sieve of Eratosthenes to find the first three prime numbers up to `v1`. The code should be readable and efficient. Handle edge cases, such as `v1=1`, and return the first three primes as `[p1, p2, p3]`. Success is measured by correct prime outputs for various inputs, including edge cases. For example, `get_3primesfromsoe(10)` should return `[2, 3, 5]`, and `get_3primesfromsoe(1)` should return `[]`. Include comments explaining key steps.
+
+=== LLM-optimized Prompt ===
+
+Role: Python Developer
+Goal: Implement the Sieve of Eratosthenes algorithm to find the first three prime numbers up to a given value `v1`. The code should be readable and efficient.
+Constraints: Handle edge cases such as `v1=1`. Return the first three primes as a list `[p1, p2, p3]`. Include comments explaining key steps.
+Output format: A Python function named `get_3primesfromsoe(v1)` that returns a list of the first three prime numbers up to `v1`.
+Edge cases: Ensure the function returns `[]` for `v1=1` and correct primes for other input values.
