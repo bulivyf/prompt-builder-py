@@ -31,7 +31,7 @@ A local web app that guides you through:
    ```
 
 5. **Open the webpage**
-   - http://127.0.0.1:8000
+   - http://127.0.0.1:8003
 
 ## Local LLM setup (default path)
 
