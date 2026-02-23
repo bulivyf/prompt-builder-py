@@ -15,7 +15,7 @@ if exist .env (
 )
 
 if "%HOST%"=="" set HOST=127.0.0.1
-if "%PORT%"=="" set PORT=8003
+if "%PORT%"=="" set PORT=8012
 
 echo Starting Prompt Builder on http://%HOST%:%PORT%
 echo Press CTRL+C to stop.
