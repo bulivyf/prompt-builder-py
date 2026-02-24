@@ -97,7 +97,13 @@ stageSelect?.addEventListener("change", () => {
 
 function sanitizeRefinedPrompt(text) {
   if (!text) return "";
-  return text.replace(/(<\|endoftext\|>\s*)+/g, "").trim();
+  let cleaned = text.replace(/\r\n/g, "\n");
+  cleaned = cleaned.replace(/^```[a-zA-Z0-9_-]*\n?/gm, "");
+  cleaned = cleaned.replace(/```/g, "");
+  cleaned = cleaned.replace(/^\s*#+\s*/gm, "");
+  cleaned = cleaned.replace(/^\s*>\s?/gm, "");
+  cleaned = cleaned.replace(/(<\|endoftext\|>\s*)+/g, "");
+  return cleaned.trim();
 }
 
 function setStatus(msg) { statusEl.textContent = msg || ""; }

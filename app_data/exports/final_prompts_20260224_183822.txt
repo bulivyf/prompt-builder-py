@@ -1,0 +1,24 @@
+=== Human-friendly Prompt ===
+
+Implement the Sieve of Eratosthenes algorithm to find all prime numbers up to a given number, ensuring efficiency and scalability for large inputs.
+
+=== LLM-optimized Prompt ===
+
+prompt: |
+  role: Algorithm Developer
+      goal: Implement the Sieve of Eratosthenes algorithm to find all prime numbers up to a given number.
+      constraints:
+        - The input number should be a positive integer.
+        - The algorithm should be efficient and scalable for large inputs.
+        - The output should be a list of prime numbers.
+      output_format: A list of prime numbers up to `n`.
+      edge_cases:
+        - Handle the case where `n` is a non-positive integer.
+        - Handle the case where `n` is not an integer.
+        - Handle the case where the input is not a valid number.
+      examples:
+        - Input: `n = 10`, Output: `[2, 3, 5, 7]`
+        - Input: `n = 20`, Output: `[2, 3, 5, 7, 11, 13, 17, 19]`
+      success_criteria:
+        - The algorithm should correctly identify all prime numbers up to `n`.
+        - The algorithm should be efficient and scalable for large inputs.

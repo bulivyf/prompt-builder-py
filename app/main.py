@@ -14,6 +14,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+import re
+import yaml
 
 from .db import init_db, get_db, APP_DATA_DIR
 from .models import PromptRecord
@@ -78,12 +80,64 @@ class _LLMGuard:
 
 
 def _strip_code_fences(text: str) -> str:
-    t = text.strip()
-    if t.startswith("```"):
-        # Remove leading ```lang? and trailing ```
-        t = t.split("\n", 1)[1] if "\n" in t else ""
-        t = t.rsplit("```", 1)[0]
-    return t.strip()
+    t = text.replace("\r\n", "\n")
+    if "```" not in t:
+        return t.strip()
+    lines = t.split("\n")
+    out = []
+    in_fence = False
+    for line in lines:
+        if line.strip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        out.append(line)
+    return "\n".join(out).strip()
+
+
+def _strip_markdown_lines(text: str) -> str:
+    lines = text.splitlines()
+    cleaned = []
+    for line in lines:
+        stripped = line.lstrip()
+        if stripped.startswith("> "):
+            line = stripped[2:]
+        elif stripped.startswith("#"):
+            hashless = stripped.lstrip("#")
+            if hashless.startswith(" "):
+                line = hashless.lstrip()
+        cleaned.append(line)
+    return "\n".join(cleaned)
+
+
+def _normalize_plain_text(text: str) -> str:
+    cleaned = _strip_code_fences(text).replace("\r\n", "\n")
+    cleaned = _strip_markdown_lines(cleaned)
+    return cleaned.strip()
+
+
+def _is_valid_yaml_mapping(text: str) -> bool:
+    if not text.strip():
+        return False
+    try:
+        obj = yaml.safe_load(text)
+    except Exception:
+        return False
+    return isinstance(obj, dict)
+
+
+def _wrap_as_yaml(text: str) -> str:
+    cleaned = text.strip()
+    if not cleaned:
+        return "prompt: |\n  "
+    indented = "\n".join(f"  {line}" for line in cleaned.splitlines())
+    return f"prompt: |\n{indented}"
+
+
+def _ensure_yaml(text: str) -> str:
+    cleaned = _strip_code_fences(text)
+    if _is_valid_yaml_mapping(cleaned):
+        return cleaned.strip()
+    return _wrap_as_yaml(cleaned)
 
 
 def _extract_first_json_object(text: str) -> Optional[str]:
@@ -136,6 +190,78 @@ def _parse_json_lenient(raw: str) -> Dict:
         return json.loads(candidate)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON extracted from model output: {e}") from e
+
+
+def _parse_json_string(raw: str, start: int) -> Optional[str]:
+    if start >= len(raw) or raw[start] != '"':
+        return None
+    i = start + 1
+    esc = False
+    while i < len(raw):
+        ch = raw[i]
+        if esc:
+            esc = False
+        elif ch == "\\":
+            esc = True
+        elif ch == '"':
+            try:
+                return json.loads(raw[start:i + 1])
+            except Exception:
+                return None
+        i += 1
+    return None
+
+
+def _extract_value_for_key(raw: str, key: str) -> Optional[str]:
+    m = re.search(rf'["\']?{re.escape(key)}["\']?\s*:', raw)
+    if not m:
+        return None
+    i = m.end()
+    while i < len(raw) and raw[i].isspace():
+        i += 1
+    if i >= len(raw):
+        return None
+
+    if raw[i] == '"':
+        return _parse_json_string(raw, i)
+    if raw[i] == "'":
+        end = raw.find("'", i + 1)
+        if end == -1:
+            return raw[i + 1 :].strip()
+        return raw[i + 1 : end]
+    if raw[i] == "|":
+        i += 1
+        if i < len(raw) and raw[i] in "+-":
+            i += 1
+        if i < len(raw) and raw[i] == "\n":
+            i += 1
+        text = raw[i:]
+        end = text.rfind("}")
+        if end != -1:
+            text = text[:end]
+        return text.strip().rstrip(",").strip()
+
+    # Unquoted fallback: read until comma/newline/brace
+    end = len(raw)
+    for sep in [",", "\n", "}"]:
+        j = raw.find(sep, i)
+        if j != -1:
+            end = min(end, j)
+    return raw[i:end].strip().strip('"').strip("'")
+
+
+def _parse_accept_output(raw: str) -> Dict:
+    try:
+        return _parse_json_lenient(raw)
+    except Exception:
+        human = _extract_value_for_key(raw, "human_friendly_prompt")
+        llm = _extract_value_for_key(raw, "llm_optimized_prompt")
+        if human is None and llm is None:
+            raise
+        return {
+            "human_friendly_prompt": human or "",
+            "llm_optimized_prompt": llm or "",
+        }
 
 
 @app.on_event("startup")
@@ -315,13 +441,14 @@ Return STRICT JSON ONLY (no markdown, no commentary, no code fences, no extra te
 Rules:
 - Keep the two variants semantically aligned.
 - Human-friendly: clear, natural language, easy to read.
-- LLM-optimized: structured, explicit instructions with roles, constraints, and output format.
+- LLM-optimized: return YAML ONLY (no code fences). Use a top-level mapping.
 - The LLM-optimized variant should include:
-  - Role
-  - Goal
-  - Constraints
-  - Output format
-  - Edge cases / failure handling (if relevant)
+  - role
+  - goal
+  - constraints
+  - output_format
+  - edge_cases (if relevant)
+- JSON values must be quoted strings. Do NOT use YAML block scalars like `|` inside JSON.
 """
 
 
@@ -402,7 +529,7 @@ async def api_refine(request: Request, payload: RefineRequest):
         client = LLMClient()
         try:
             refined = await client.complete(_system_refine(mode, stage), user)
-            return RefineResponse(refined_prompt=refined.strip())
+            return RefineResponse(refined_prompt=_normalize_plain_text(refined))
         except HTTPException:
             raise
         except Exception as e:
@@ -427,7 +554,7 @@ async def api_accept(request: Request, payload: AcceptRequest):
         raw = await client.complete(SYSTEM_ACCEPT, user)
 
     try:
-        obj = _parse_json_lenient(raw)
+        obj = _parse_accept_output(raw)
     except Exception as e:
         snippet = raw.strip().replace("\r", "")[:600]
         raise HTTPException(
@@ -435,8 +562,8 @@ async def api_accept(request: Request, payload: AcceptRequest):
             detail=f"Failed to parse JSON from model output: {e}. Output starts with: {snippet}",
         )
 
-    human = str(obj.get("human_friendly_prompt", "")).strip()
-    opt = str(obj.get("llm_optimized_prompt", "")).strip()
+    human = _normalize_plain_text(str(obj.get("human_friendly_prompt", "")))
+    opt = _ensure_yaml(str(obj.get("llm_optimized_prompt", "")))
     if not human or not opt:
         raise HTTPException(status_code=400, detail="JSON missing required fields or they were empty.")
 
@@ -448,13 +575,15 @@ async def api_accept(request: Request, payload: AcceptRequest):
 
 @app.post("/api/save_db", response_model=SaveDBResponse)
 def api_save_db(payload: SaveDBRequest, db: Session = Depends(get_db)):
+    human = _normalize_plain_text(payload.human_friendly_prompt or "")
+    llm = _ensure_yaml(payload.llm_optimized_prompt or "")
     rec = PromptRecord(
         initial_prompt=payload.initial_prompt,
         questions_json=json.dumps(payload.questions, ensure_ascii=False),
         answers_json=json.dumps(payload.answers, ensure_ascii=False),
         refined_prompt=payload.refined_prompt,
-        human_friendly_prompt=payload.human_friendly_prompt,
-        llm_optimized_prompt=payload.llm_optimized_prompt,
+        human_friendly_prompt=human,
+        llm_optimized_prompt=llm,
     )
     db.add(rec)
     db.commit()
@@ -475,11 +604,13 @@ def api_save_file(payload: SaveFileRequest):
         filename += ".txt"
 
     path = exports_dir / filename
+    human = _normalize_plain_text(payload.human_friendly_prompt or "")
+    llm = _ensure_yaml(payload.llm_optimized_prompt or "")
     content = (
         "=== Human-friendly Prompt ===\n\n"
-        f"{payload.human_friendly_prompt.strip()}\n\n"
+        f"{human}\n\n"
         "=== LLM-optimized Prompt ===\n\n"
-        f"{payload.llm_optimized_prompt.strip()}\n"
+        f"{llm}\n"
     )
     path.write_text(content, encoding="utf-8")
     return SaveFileResponse(saved_path=str(path.resolve()))

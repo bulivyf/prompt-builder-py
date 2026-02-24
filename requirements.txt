@@ -6,6 +6,7 @@ pydantic>=2.6
 sqlalchemy>=2.0
 aiosqlite>=0.19
 python-dotenv>=1.0
+pyyaml>=6.0
 
 # Optional providers (install as needed)
 openai>=1.30.0
