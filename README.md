@@ -22,8 +22,9 @@ A local web app that guides you through:
 
 3. **(Recommended) Configure .env**
    Copy `.env.example` to `.env` and edit values:
-   - If you have any API key set (OPENAI/ANTHROPIC/GOOGLE/GROK/HF), the app will use that provider (unless LLM_PROVIDER is explicitly set).
-   - If no external keys are set, it will default to **local** using `LOCAL_MODEL_PATH`.
+- Default provider is **local**.
+- To use a remote provider, explicitly set `LLM_PROVIDER` (or legacy `LLM_Provider`) to one of: `openai`, `anthropic`, `google`, `grok`, `huggingface`.
+- For *any other provider name*, define `PROVIDER_<NAME>_API_KEY`, `PROVIDER_<NAME>_BASE_URL`, and `PROVIDER_<NAME>_MODEL` (see `.env.example`).
 
 4. **Run**
    ```bat
@@ -31,7 +32,7 @@ A local web app that guides you through:
    ```
 
 5. **Open the webpage**
-   - http://127.0.0.1:8012
+   - http://127.0.0.1:<PORT>
 
 ## Local LLM setup (default path)
 
