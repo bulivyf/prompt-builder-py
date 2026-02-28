@@ -75,7 +75,7 @@ function updateModeUI() {
   setPanelVisible(stageWrap, isSdlc);
   setPanelVisible(sectionQuestions, !isGeneral);
   if (btnQuestions) {
-    btnQuestions.textContent = isGeneral ? "Refine prompr" : "Generate clarifying questions";
+    btnQuestions.textContent = isGeneral ? "Refine prompt" : "Generate clarifying questions";
   }
 
   // In general mode, the questions workflow is not used.
